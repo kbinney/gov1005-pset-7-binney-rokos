@@ -20,6 +20,7 @@ poll_results <- dir_ls("2018-live-poll-results-master/data") %>%
 file_delete(dir_ls("2018-live-poll-results-master/"))
 file_delete("2018-live-poll-results-master.zip")
 
+
 # As Preceptor commented in his midterm 1 solutions, the poll data files
 # contain information in their names in a structurally consistent manner. Each
 # file is titled "elections-poll-[2 letter state code][race]-[poll
@@ -45,7 +46,13 @@ poll_results <- poll_results %>%
                                    "sen" = "senate",
                                    "gov" = "governor",
                                    .default = "house"),
-         poll_wave = parse_number(poll_wave)) %>% 
+         poll_wave = parse_number(poll_wave)) 
+  
+# After joining all data, we save it to read in when finding interesting
+# district info
+write_rds("poll_results", path = "poll_data")
+
+poll_results <- poll_results %>% 
   # We need to figure out which poll is latest for each election, and
   # then calculate the rep advantage in each race
   group_by(state, race_type, district) %>% 
