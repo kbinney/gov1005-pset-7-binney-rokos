@@ -134,7 +134,8 @@ results <- bind_rows(house_results, senate_results, governor_results)
 # information about races in the upshot data
 all_election_data <- poll_results %>% 
   left_join(results, by = c("district", "state", "race_type"), 
-            suffix = c("_poll", "_results"))
+            suffix = c("_poll", "_results")) %>% 
+  mutate(poll_diff = rep_advantage_poll - rep_advantage_results)
 
 # We now have really nice, clean data we can store to use in our app
 write_rds(all_election_data, path = "poll_diff/data")

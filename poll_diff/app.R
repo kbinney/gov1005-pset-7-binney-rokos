@@ -13,6 +13,17 @@ library(ggplot2)
 library(readr)
 
 election_data <- read_rds("data")
+
+education_data <- read_rds("education_data")
+# Get options for education level
+educ_levels <- names(education_factor)[2:5]
+race_edu_data <- read_rds("race_edu")
+# Get options for race/edu level
+race_edu_levels <- names(race_edu_data)[2:5]
+race_eth_data <- read_rds("race_eth")
+# get options for race/eth levels
+race_eth_levels <- names(race_eth_data)[2:6]
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
@@ -22,18 +33,22 @@ ui <- fluidPage(
   # Sidebar with a slider input for number of bins 
   sidebarLayout(
     sidebarPanel(
-      selectInput("race_type",
-                  "Which races would you like to compare?",
-                  c("House" = "house",
-                    "Senate" = "senate",
-                    "Governor" = "governor"),
-                  multiple = TRUE,
-                  selected = c("house", "senate", "governor"))
+      selectInput("educ",
+                  "Which education level would you like to compare?",
+                  educ_levels),
+      selectInput("race",
+                  "What race and education level would you like to consider?",
+                  race_edu_levels),
+      selectInput("race_eth",
+                  "Which race would you like to compare?",
+                  race_eth_levels)
     ),
     
     # Show a plot of the generated distribution
     mainPanel(
-      plotOutput("distPlot")
+      plotOutput("educPlot"),
+      plotOutput("raceEduPlot"),
+      plotOutput("racePlot")
     )
   )
 )
@@ -41,32 +56,43 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  output$distPlot <- renderPlot({
+  output$educPlot <- renderPlot({
     # Let's add a column to our data with predicted win
-    election_data <- election_data %>%
-      mutate("Predicted Win" = case_when(rep_advantage_poll < 0 ~ "Dem",
-                                         TRUE ~ "Rep"),
-             "Actual Win" = case_when(rep_advantage_results < 0 ~ "Dem",
-                                      TRUE ~ "Rep"))
-    
+    election_data <- election_data %>% 
+      left_join(education_data)
     election_data %>% 
-      filter(race_type %in% input$race_type) %>% 
-      ggplot(aes(x = rep_advantage_poll, y = rep_advantage_results, 
-                 color = `Predicted Win`,
-                 fill = `Actual Win`)) +
+      ggplot(aes_string(x = input$educ, y = "poll_diff")) +
       geom_point(shape = 21, size = 2) +
       ggtitle("Democrats did slightly better than Upshot polls anticipated",
               subtitle = "Predictions by NYTimes upshot, midterm elections results as of 11/10") +
-      xlab("Predicted Republican Advantage") +
-      ylab("Actual Republican Advantage") +
-      # Swap default colors so dem is blue and rep is read
-      scale_fill_manual(values = c( "#00BFC4", "#F8766D")) +
-      scale_color_manual(values = c("#00BFC4", "#F8766D")) +
-      # add a line to make clear where predictions and results matched
-      geom_abline(aes(slope = 1, intercept = 0)) +
-      geom_text(aes(10,10,label = "Prediction matches results", hjust = 1), 
-                inherit.aes = FALSE)
-    
+      xlab("Percent") +
+      ylab("Difference between Republican advantage prediction and result")
+  })
+  
+  output$raceEduPlot <- renderPlot({
+    # Let's add a column to our data with predicted win
+    election_data <- election_data %>% 
+      left_join(race_edu_data)
+    election_data %>% 
+      ggplot(aes_string(x = input$race, y = "poll_diff")) +
+      geom_point(shape = 21, size = 2) +
+      ggtitle("Democrats did slightly better than Upshot polls anticipated",
+              subtitle = "Predictions by NYTimes upshot, midterm elections results as of 11/10") +
+      xlab("Percent") +
+      ylab("Difference between Republican advantage prediction and result")
+  })
+  
+  output$racePlot <- renderPlot({
+    # Let's add a column to our data with predicted win
+    election_data <- election_data %>% 
+      left_join(race_eth_data)
+    election_data %>% 
+      ggplot(aes_string(x = input$race_eth, y = "poll_diff")) +
+      geom_point(shape = 21, size = 2) +
+      ggtitle("Democrats did slightly better than Upshot polls anticipated",
+              subtitle = "Predictions by NYTimes upshot, midterm elections results as of 11/10") +
+      xlab("Percent") +
+      ylab("Difference between Republican advantage prediction and result")
   })
 }
 
