@@ -50,7 +50,7 @@ poll_results <- poll_results %>%
   
 # After joining all data, we save it to read in when finding interesting
 # district info
-write_rds("poll_results", path = "poll_data")
+write_rds(poll_results, path = "poll_data")
 
 poll_results <- poll_results %>% 
   # We need to figure out which poll is latest for each election, and
