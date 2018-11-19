@@ -10,7 +10,8 @@ library(fs)
 
 download.file("https://goo.gl/ZRCBda",
               "2018-live-poll-results-master.zip",
-              quiet = TRUE)
+              quiet = TRUE,
+              mode = "wb")
 unzip("2018-live-poll-results-master.zip")
 
 
