@@ -1,4 +1,8 @@
 # BACKGROUND CODE FOR PROBLEM SET 7 APP
+# This file joins all polling and actual data into a single data frame.
+# It also processes democratic advantage in polling data.
+# It saves that full dataframe for processing demographic data (different file)
+# Finally, it computes the dem advantage per district and saves that for the app
 
 # Loading potentially useful libraries
 library(tidyverse)
