@@ -33,7 +33,67 @@ all_polls$source <- str_remove(all_polls$source, ".csv")
 all_polls <- separate(all_polls, source, into = c("district", "wave"), sep = "-")
 all_polls <- separate(all_polls, district, into = c("state", "district_race"), sep = 2)
 
+# Calculating the predicted democratic margin for each race and the demographic breakdowns of respondents in that race.
+dem_advantage <- all_polls %>% 
+  select(state, district_race, wave, response, final_weight) %>% 
+  group_by(state, district_race, wave, response) %>% 
+  summarize(weighted = sum(final_weight)) %>% 
+  spread(key = response, value = weighted) %>% 
+  ungroup() %>% 
+  mutate(Dem_advantage = ((Dem - Rep)/(3 + 4 + 5 + 6 + Dem + Rep + Und))*100,
+         district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
+                                   TRUE ~ district_race)) %>% 
+  select(state, district_race, wave, Dem_advantage)
 
+# Only using the most recent polls
+double_polls <- dem_advantage %>% 
+  count(state, district_race) %>% 
+  filter(n == 2)
+
+dem_advatage <- dem_advantage %>% 
+  left_join(double_polls, by = c("state", "district_race")) %>% 
+  filter(is.na(n) | n == 2 & wave == 3) %>% 
+  select(-n)
+
+# Age table:
+age <- all_polls %>% 
+  filter(response %in% c("Dem", "Rep", "Und"), 
+         !ager %in% c("[DO NOT READ] Don't know/Refused", "[DO NOT READ] Refused")) %>% 
+  group_by(state, district_race) %>% 
+  count(ager) %>% 
+  mutate(percent_in = n/(sum(n))*100)
+
+# Education table:
+education <- all_polls %>% 
+  filter(response %in% c("Dem", "Rep", "Und"), 
+         educ4 != "[DO NOT READ] Don't know/Refused") %>% 
+  group_by(state, district_race) %>% 
+  count(educ4) %>% 
+  mutate(percent_in = n/(sum(n))*100)
+
+# Gender table:
+gender <- all_polls %>% 
+  filter(response %in% c("Dem", "Rep", "Und"), 
+         gender != "[DO NOT READ] Don't know/Refused") %>% 
+  group_by(state, district_race) %>% 
+  count(gender) %>% 
+  mutate(percent_in = n/(sum(n))*100)
+
+# Race table:
+race <- all_polls %>% 
+  filter(response %in% c("Dem", "Rep", "Und"), 
+         race_eth != "[DO NOT READ] Don't know/Refused") %>% 
+  group_by(state, district_race) %>% 
+  count(race_eth) %>% 
+  mutate(percent_in = n/(sum(n))*100)
+
+# Likeliness to vote:
+likeliness <- all_polls %>% 
+  filter(response %in% c("Dem", "Rep", "Und"), 
+         likely != "[DO NOT READ] Don't know/Refused") %>% 
+  group_by(state, district_race) %>% 
+  count(likely) %>% 
+  mutate(percent_in = n/(sum(n))*100)
 
 # CREATING A DATA FRAME THAT INCLUDES THE RESULTS OF EACH RACE AS WELL (STILL AT POLL LEVEL)
 # Downloaded results data from link provided in piazza and moved it to this project as "2018_House_Results.csv"
@@ -76,7 +136,8 @@ results_and_polls <- all_polls %>%
   mutate(district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
                             TRUE ~ district_race)) %>% 
   left_join(house_results, by = c("state", "district_race")) %>% 
-  mutate(district = str_c(state, "-", district_race)) %>% 
+  mutate(district = str_c(state, "-", district_race),
+         district = str_to_upper(district)) %>% 
   select(-36:-86)   # dropping unnecessary survey questions
 
 # Manually filling in the results for the gubernatiorial and senate races as well as for not-yet-called house races
@@ -137,6 +198,41 @@ results_and_polls <- results_and_polls %>%
                                                 "fl-gov", "fl-sen") ~ 0.5,
                                 TRUE ~ 1))
 
+# Calculating the predicted democratic margin for each race
+results_and_polls %>% 
+  select(state, district_race, wave, response, final_weight) %>% 
+  group_by(state, district_race, wave, response) %>% 
+  summarize(weighted = sum(final_weight)) %>% 
+  spread(key = response, value = weighted) %>% 
+  ungroup() %>% 
+  mutate(Rep_advantage = ((Rep - Dem)/(3 + 4 + 5 + 6 + Dem + Rep + Und))*100,
+         district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
+                                   TRUE ~ district_race)) %>% 
+  select(state, district_race, wave, Rep_advantage)
 
+
+# Generating a table with columns for each demographic element and a column with the percent of respondents in that category
+# First category is age:
+# Likeliness to vote:
+int_to_vote <- results_and_polls %>% 
+  filter(response %in% c("Dem", "Rep", "Und")) %>% 
+  count(likely, response) %>% 
+  group_by(likely) %>% 
+  mutate(total_responses = sum(n), percent_vote = n/total_responses) %>%
+  select(likely, total_responses, response, percent_vote) %>% 
+  spread(key = response, value = percent_vote)                # these numbers don't quite match the NYT table...
+
+# Below NYT table it says, "Percentages are weighted to resemble likely voters; the number of respondents in each subgroup is unweighted. Undecided voters includes those who refused to answer," so I need to recreate my table to account for weights.
+weighted_int_to_vote <- maine_02 %>% 
+  select(response, likely, final_weight) %>% 
+  group_by(likely, response) %>% 
+  summarize(weighted_count = sum(final_weight)) %>% 
+  filter(response %in% c("Dem", "Rep", "Und")) %>%
+  group_by(likely) %>% 
+  mutate(percent_vote = weighted_count/sum(weighted_count)*100) %>% 
+  select(likely, response, percent_vote) %>% 
+  spread(key = response, value = percent_vote) %>% 
+  left_join(int_to_vote, by = "likely") %>% 
+  select(likely, total_responses, Dem.x, Rep.x, Und.x)
 
 
