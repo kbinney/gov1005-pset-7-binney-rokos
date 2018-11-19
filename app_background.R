@@ -32,28 +32,32 @@ all_polls$source <- str_remove(all_polls$source, "2018-live-poll-results-master/
 all_polls$source <- str_remove(all_polls$source, ".csv")
 all_polls <- separate(all_polls, source, into = c("district", "wave"), sep = "-")
 all_polls <- separate(all_polls, district, into = c("state", "district_race"), sep = 2)
+all_polls <- all_polls %>% 
+  mutate(district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
+                            TRUE ~ district_race))
+
+# Keeping only the most recent poll results:
+double_polls <- all_polls %>% 
+  count(state, district_race, wave) %>% 
+  count(state, district_race) %>%
+  filter(nn == 2)
+
+all_polls <- all_polls %>% 
+  left_join(double_polls, by = c("state", "district_race")) %>% 
+  filter(is.na(nn) | nn == 2 & wave == 3) %>% 
+  select(-nn)
+
 
 # Calculating the predicted democratic margin for each race and the demographic breakdowns of respondents in that race.
+# Democratic margin:
 dem_advantage <- all_polls %>% 
   select(state, district_race, wave, response, final_weight) %>% 
   group_by(state, district_race, wave, response) %>% 
   summarize(weighted = sum(final_weight)) %>% 
   spread(key = response, value = weighted) %>% 
   ungroup() %>% 
-  mutate(Dem_advantage = ((Dem - Rep)/(3 + 4 + 5 + 6 + Dem + Rep + Und))*100,
-         district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
-                                   TRUE ~ district_race)) %>% 
-  select(state, district_race, wave, Dem_advantage)
-
-# Only using the most recent polls
-double_polls <- dem_advantage %>% 
-  count(state, district_race) %>% 
-  filter(n == 2)
-
-dem_advatage <- dem_advantage %>% 
-  left_join(double_polls, by = c("state", "district_race")) %>% 
-  filter(is.na(n) | n == 2 & wave == 3) %>% 
-  select(-n)
+  mutate(dem_advantage = ((Dem - Rep)/(3 + 4 + 5 + 6 + Dem + Rep + Und))*100) %>% 
+  select(state, district_race, wave, dem_advantage)
 
 # Age table:
 age <- all_polls %>% 
@@ -95,6 +99,14 @@ likeliness <- all_polls %>%
   count(likely) %>% 
   mutate(percent_in = n/(sum(n))*100)
 
+# Joining together demographic tables:
+summary_polls <- age %>% 
+  bind_rows(education, gender, likeliness, race) %>% 
+  arrange(state, district_race) %>% 
+  select(state, district_race, ager, educ4, gender, likely, race_eth, percent_in, n) %>% 
+  left_join(dem_advantage, by = c("state", "district_race"))
+
+
 # CREATING A DATA FRAME THAT INCLUDES THE RESULTS OF EACH RACE AS WELL (STILL AT POLL LEVEL)
 # Downloaded results data from link provided in piazza and moved it to this project as "2018_House_Results.csv"
 # Now reading in the results data
@@ -132,13 +144,10 @@ house_results <- house_results %>%
   left_join(state_names, by = "state_name")
 
 # Binding the two data sets so that we have each poll response and the actual outcome for the district of that response
-results_and_polls <- all_polls %>% 
-  mutate(district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
-                            TRUE ~ district_race)) %>% 
+results_and_polls <- summary_polls %>% 
   left_join(house_results, by = c("state", "district_race")) %>% 
   mutate(district = str_c(state, "-", district_race),
-         district = str_to_upper(district)) %>% 
-  select(-36:-86)   # dropping unnecessary survey questions
+         district = str_to_upper(district))
 
 # Manually filling in the results for the gubernatiorial and senate races as well as for not-yet-called house races
 results_and_polls %>% 
@@ -198,41 +207,25 @@ results_and_polls <- results_and_polls %>%
                                                 "fl-gov", "fl-sen") ~ 0.5,
                                 TRUE ~ 1))
 
-# Calculating the predicted democratic margin for each race
+# Calculating the polling error for each race:
+results_and_polls <- results_and_polls %>% 
+  mutate(poll_error = actual_dem_margin - dem_advantage)
+
+results_and_polls %>% write_rds("poll_mistakes/results_and_polls")
+
 results_and_polls %>% 
-  select(state, district_race, wave, response, final_weight) %>% 
-  group_by(state, district_race, wave, response) %>% 
-  summarize(weighted = sum(final_weight)) %>% 
-  spread(key = response, value = weighted) %>% 
-  ungroup() %>% 
-  mutate(Rep_advantage = ((Rep - Dem)/(3 + 4 + 5 + 6 + Dem + Rep + Und))*100,
-         district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
-                                   TRUE ~ district_race)) %>% 
-  select(state, district_race, wave, Rep_advantage)
+  filter(!is.na(likely)) %>% 
+  ggplot(aes(x = percent_in, y = poll_error, color = likely)) +
+  geom_point() +
+  facet_wrap(~likely)
 
+results_and_polls %>% 
+  ggplot(aes(x = swing_16, y = poll_error)) +
+  geom_point() +
+  geom_smooth(method = "lm")
 
-# Generating a table with columns for each demographic element and a column with the percent of respondents in that category
-# First category is age:
-# Likeliness to vote:
-int_to_vote <- results_and_polls %>% 
-  filter(response %in% c("Dem", "Rep", "Und")) %>% 
-  count(likely, response) %>% 
-  group_by(likely) %>% 
-  mutate(total_responses = sum(n), percent_vote = n/total_responses) %>%
-  select(likely, total_responses, response, percent_vote) %>% 
-  spread(key = response, value = percent_vote)                # these numbers don't quite match the NYT table...
-
-# Below NYT table it says, "Percentages are weighted to resemble likely voters; the number of respondents in each subgroup is unweighted. Undecided voters includes those who refused to answer," so I need to recreate my table to account for weights.
-weighted_int_to_vote <- maine_02 %>% 
-  select(response, likely, final_weight) %>% 
-  group_by(likely, response) %>% 
-  summarize(weighted_count = sum(final_weight)) %>% 
-  filter(response %in% c("Dem", "Rep", "Und")) %>%
-  group_by(likely) %>% 
-  mutate(percent_vote = weighted_count/sum(weighted_count)*100) %>% 
-  select(likely, response, percent_vote) %>% 
-  spread(key = response, value = percent_vote) %>% 
-  left_join(int_to_vote, by = "likely") %>% 
-  select(likely, total_responses, Dem.x, Rep.x, Und.x)
-
+results_and_polls %>% 
+  ggplot(aes(x = clinton_16, y = poll_error)) +
+  geom_point() +
+  geom_smooth(method = "lm")
 
