@@ -1,12 +1,9 @@
 library(tidyverse)
 library(readr)
 
-elections_data <- read_rds("poll_data") %>% 
-  mutate(race_type = as.character(race_type),
-         district_abb = case_when(race_type == "senate" ~ "sen",
-                                  race_type == "governor" ~ "gov",
-                                  TRUE ~ as.character(district)),
-         district = paste0(state, "-", district_abb))
+# This file is used to take all interview level data and find out interesting things about each district's
+# demographics
+elections_data <- read_rds("poll_data")
 
 # 
 education_factor <- elections_data %>% 
@@ -24,8 +21,8 @@ education_factor <- elections_data %>%
   mutate(percent = 100 * n / num_interviews) %>% 
   ungroup() %>%
   filter(!is.na(education)) %>% 
-  select(district, percent, education) %>% 
-  spread(education, percent)
+  # Rename this column so all tables have demographic column 
+  mutate(demographic = education)
 
 write_rds(education_factor, path = "poll_diff/education_data")
   
@@ -60,7 +57,8 @@ race_factor <- elections_data %>%
   ungroup() %>%
   filter(!is.na(race_eth)) %>% 
   select(district, percent, race_eth) %>% 
-  spread(race_eth, percent)
+  # Rename this column so all tables have demographic column 
+  mutate(demographic = race_eth)
 
 write_rds(race_factor, path = "poll_diff/race_eth")
 

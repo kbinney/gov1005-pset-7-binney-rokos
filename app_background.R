@@ -61,7 +61,7 @@ poll_dem_advantage <- all_polls %>%
   summarize(dem_poll = sum(Dem),
             rep_poll = sum(Rep),
             other_poll = group_wt - dem_poll - rep_poll,
-            dem_advantage = 100 * (dem_poll - rep_poll) / group_wt) %>% 
+            dem_advantage_poll = 100 * (dem_poll - rep_poll) / group_wt) %>% 
   # I want to join the tables to have state, race_type, district as 
   # [State]-[district num, sen, gov], dem, rep, other, rep_advantage_poll, rep_advantage
   ungroup() %>% 
@@ -150,10 +150,18 @@ results_and_polls <- results_and_polls %>%
                                        TRUE ~ actual_dem_margin),
          not_called = case_when(district %in% c("ca-39", "ut-4", 
                                                 "fl-gov", "fl-sen") ~ 0.5,
-                                TRUE ~ 1))
+                                TRUE ~ 1)) %>% 
+  mutate(poll_diff = actual_dem_margin - dem_advantage_poll)
 
 
 # We store this data for use in figuring out interesting things about each district
 write_rds(results_and_polls, path = "poll_data")
 
+# We also summarize to have one line for each district of poll diff
+# We use this data in our shiny app
+results_and_polls %>% 
+  group_by(district) %>% 
+  distinct(poll_diff) %>% 
+  write_rds(path = "poll_diff/error_data")
+  
 
