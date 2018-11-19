@@ -29,7 +29,7 @@ ui <- fluidPage(
     sidebarPanel(
       selectInput("dataset",
                   label = "Which demographic would you like to consider?",
-                  choices = c("education", "race"))
+                  choices = c("education", "race", "race/education"))
     ),
     
     # Show a plot of the generated distribution
@@ -43,29 +43,28 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  # Pick the correct dataset with compiled demographics
+  # Pick the correct dataset with compiled demographics for a district
   datasetInput <- reactive({
     switch(input$dataset,
            "race" = race_eth_data,
-           "education" = education_data)
+           "education" = education_data,
+           "race/education" = race_edu_data)
   })
   
   
   output$Plot <- renderPlot({
-
+  
+    # This chooses which demographic, which we need to join to the data with 
+    # poll error before graphing
     dataset <- datasetInput()
     election_data <- error_data %>% 
       left_join(dataset, by = c("district"))
     election_data %>% 
-      ggplot(aes(x = percent, y = poll_diff, fill = demographic)) +
+      ggplot(aes(x = percent, y = poll_diff, color = factor(demographic))) +
       geom_point() +
-      geom_smooth(method = "lm")
+      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE)
   })
   
-  output$tibble <- renderTable({
-    dataset <- datasetInput()
-    dataset
-  })
   
 }
 

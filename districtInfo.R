@@ -42,7 +42,8 @@ race_edu_factor <- elections_data %>%
   ungroup() %>%
   filter(!is.na(race_edu)) %>% 
   select(district, percent, race_edu) %>% 
-  spread(race_edu, percent)
+  # Rename this column so all tables have demographic column 
+  mutate(demographic = race_edu)
 
 write_rds(race_edu_factor, path = "poll_diff/race_edu")
 
