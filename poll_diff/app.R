@@ -111,13 +111,17 @@ server <- function(input, output) {
   })
   
   
-  output$Plot <- renderPlot({
+  output$Plot <- renderPlotly({
   
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
     dataset <- datasetInput()
     election_data <- error_data %>% 
       left_join(dataset, by = c("district"))
+    ggplotly(tooltip = c("text"),
+             ggplot(data = election_data,
+                    aes(x = percent, y = poll_diff, text = district)))
+    
     election_data %>% 
       ggplot(aes(x = percent, y = poll_diff, color = factor(demographic))) +
       geom_point() +
