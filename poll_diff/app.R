@@ -22,6 +22,7 @@ gender_data <- read_rds("gender_data")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Midterm Election results: Predictions and Actual", 
+                 
   tabPanel("Race/Ethnicity",
            fluidPage(
              # Page title
@@ -29,7 +30,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
              # Sidebar with a slider input for number of bins
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("race_eth",
+                 radioButtons("race_eth",
                                     label = "Select Race/Ethnicity:",
                                     choices = c("White", "Black", "Hispanic", "Asian"),
                                     selected = "White")
@@ -48,9 +49,10 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
              # Sidebar with a slider input for number of bins
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("educ",
+                 radioButtons("educ",
                                     label = "Select Educational Attainment:",
-                                    choices = c("High School or Less", "Some College", "College Graduate", "Post-Graduate"),
+                                    choices = c("High School or Less", "Some College", 
+                                                "4-year College Graduate", "Postgraduate Degree"),
                                     selected = "High School or Less")
                ),
                # Show a plot of the generated distribution
@@ -59,6 +61,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                )
              )
            ),
+  
   tabPanel("Age",
            fluidPage(
              # Page title
@@ -66,7 +69,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
              # Sidebar with a slider input for number of bins
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("age",
+                 radioButtons("age",
                                     label = "Select Educational Attainment:",
                                     choices = c("18 to 34", "35 to 49", "50 to 64", "65 and older"),
                                     selected = "18 to 34")
@@ -77,6 +80,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                )
              )
            ),
+  
   tabPanel("Gender",
            fluidPage(
              # Page title
@@ -84,7 +88,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
              # Sidebar with a slider input for number of bins
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("age",
+                 radioButtons("age",
                                     label = "Select Gender:",
                                     choices = c("Female", "Male"),
                                     selected = "Female")
@@ -100,34 +104,44 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  
-  # Pick the correct dataset with compiled demographics for a district
-  datasetInput <- reactive({
-    switch(input$dataset,
-           "race" = race_eth_data,
-           "education" = education_data,
-           "age" = age_data,
-           "gender" = gender_data)
-  })
-  
-  
-  output$Plot <- renderPlotly({
+
+  output$plot_race_eth <- renderPlot({
   
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
-    dataset <- datasetInput()
     election_data <- error_data %>% 
-      left_join(dataset, by = c("district"))
-    ggplotly(tooltip = c("text"),
-             ggplot(data = election_data,
-                    aes(x = percent, y = poll_diff, text = district)))
+      left_join(race_eth_data, by = c("district"))
     
-    election_data %>% 
-      ggplot(aes(x = percent, y = poll_diff, color = factor(demographic))) +
+    selected_data <- election_data %>% 
+      filter(race_eth %in% c(input$race_eth))
+    
+    ggplot(data = selected_data,
+           aes(x = percent, y = poll_diff, text = district)) +
       geom_point() +
-      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
-      facet_wrap(~demographic)
+      geom_hline(yintercept = 0) +
+      ggtitle(paste0("Polling Error vs ", input$race_eth, " Percentage of Those Polled in the District"))
   })
+  
+  output$plot_educ <- renderPlot({
+    
+    # This chooses which demographic, which we need to join to the data with 
+    # poll error before graphing
+    election_data <- error_data %>% 
+      left_join(education_data, by = c("district"))
+    
+    selected_data <- switch(input$educ,
+                            "High School or Less" = election_data %>% filter(educ4 == "High School Grad. or Less"),
+                            "Some College" = election_data %>% filter(educ4 == "Some College Educ."),
+                            "4-year College Graduate" = election_data %>% filter(educ4 == "4-year College Grad."),
+                            "Postgraduate Degree" = election_data %>% filter(educ4 == "Postgraduate Degree"))
+    
+    ggplot(data = selected_data,
+           aes(x = percent, y = poll_diff, text = district)) +
+      geom_point() +
+      geom_hline(yintercept = 0) +
+      ggtitle(paste0("Polling Error vs the Percentage of Those with a ", input$educ, " Education"))
+  })
+
   
   
 }
