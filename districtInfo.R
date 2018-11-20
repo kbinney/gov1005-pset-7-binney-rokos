@@ -1,17 +1,18 @@
 library(tidyverse)
 library(readr)
 
-elections_data <- read_rds("poll_data") %>% 
-  mutate(race_type = as.character(race_type),
-         district_abb = case_when(race_type == "senate" ~ "sen",
-                                  race_type == "governor" ~ "gov",
-                                  TRUE ~ as.character(district)),
-         district = paste0(state, "-", district_abb))
+# This file is used to take all interview level data and find out interesting
+# things about each district's demographics
 
-# 
+# First, we read in preformatted polling data. This data has already been
+# compiled and joined with actual election data results.
+elections_data <- read_rds("poll_data")
+
+# We want to compare education to polling data. To do this, we first set the
+# education levels and set up our NA result. We then figure out the percentage
+# of each education level in each district. Finally, we remove the NA results.
 education_factor <- elections_data %>% 
   group_by(district)  %>% 
-  # Let's nicely refactor eduction
   mutate(education = parse_factor(educ4, ordered = TRUE, include_na = FALSE,
                                   na = c("", "NA", "[DO NOT READ] Don't know/Refused"),
                                   levels = c("High School Grad. or Less", 
@@ -24,9 +25,10 @@ education_factor <- elections_data %>%
   mutate(percent = 100 * n / num_interviews) %>% 
   ungroup() %>%
   filter(!is.na(education)) %>% 
-  select(district, percent, education) %>% 
-  spread(education, percent)
+  # Rename this column so all tables have demographic column 
+  mutate(demographic = education)
 
+# We save this data to use in our shiny app as needed
 write_rds(education_factor, path = "poll_diff/education_data")
   
 race_edu_factor <- elections_data %>% 
@@ -45,7 +47,8 @@ race_edu_factor <- elections_data %>%
   ungroup() %>%
   filter(!is.na(race_edu)) %>% 
   select(district, percent, race_edu) %>% 
-  spread(race_edu, percent)
+  # Rename this column so all tables have demographic column 
+  mutate(demographic = race_edu)
 
 write_rds(race_edu_factor, path = "poll_diff/race_edu")
 
@@ -60,7 +63,8 @@ race_factor <- elections_data %>%
   ungroup() %>%
   filter(!is.na(race_eth)) %>% 
   select(district, percent, race_eth) %>% 
-  spread(race_eth, percent)
+  # Rename this column so all tables have demographic column 
+  mutate(demographic = race_eth)
 
 write_rds(race_factor, path = "poll_diff/race_eth")
 

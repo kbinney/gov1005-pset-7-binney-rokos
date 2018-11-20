@@ -13,16 +13,10 @@ library(ggplot2)
 library(readr)
 
 election_data <- read_rds("data")
-
+error_data <- read_rds("error_data")
 education_data <- read_rds("education_data")
-# Get options for education level
-educ_levels <- names(education_factor)[2:5]
 race_edu_data <- read_rds("race_edu")
-# Get options for race/edu level
-race_edu_levels <- names(race_edu_data)[2:5]
 race_eth_data <- read_rds("race_eth")
-# get options for race/eth levels
-race_eth_levels <- names(race_eth_data)[2:6]
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -33,22 +27,15 @@ ui <- fluidPage(
   # Sidebar with a slider input for number of bins 
   sidebarLayout(
     sidebarPanel(
-      selectInput("educ",
-                  "Which education level would you like to compare?",
-                  educ_levels),
-      selectInput("race",
-                  "What race and education level would you like to consider?",
-                  race_edu_levels),
-      selectInput("race_eth",
-                  "Which race would you like to compare?",
-                  race_eth_levels)
+      selectInput("dataset",
+                  label = "Which demographic would you like to consider?",
+                  choices = c("education", "race", "race/education"))
     ),
     
     # Show a plot of the generated distribution
     mainPanel(
-      plotOutput("educPlot"),
-      plotOutput("raceEduPlot"),
-      plotOutput("racePlot")
+      plotOutput("Plot"),
+      tableOutput("tibble")
     )
   )
 )
@@ -56,44 +43,29 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  output$educPlot <- renderPlot({
-    # Let's add a column to our data with predicted win
-    election_data <- election_data %>% 
-      left_join(education_data)
-    election_data %>% 
-      ggplot(aes_string(x = input$educ, y = "poll_diff")) +
-      geom_point(shape = 21, size = 2) +
-      ggtitle("Democrats did slightly better than Upshot polls anticipated",
-              subtitle = "Predictions by NYTimes upshot, midterm elections results as of 11/10") +
-      xlab("Percent") +
-      ylab("Difference between Republican advantage prediction and result")
+  # Pick the correct dataset with compiled demographics for a district
+  datasetInput <- reactive({
+    switch(input$dataset,
+           "race" = race_eth_data,
+           "education" = education_data,
+           "race/education" = race_edu_data)
   })
   
-  output$raceEduPlot <- renderPlot({
-    # Let's add a column to our data with predicted win
-    election_data <- election_data %>% 
-      left_join(race_edu_data)
+  
+  output$Plot <- renderPlot({
+  
+    # This chooses which demographic, which we need to join to the data with 
+    # poll error before graphing
+    dataset <- datasetInput()
+    election_data <- error_data %>% 
+      left_join(dataset, by = c("district"))
     election_data %>% 
-      ggplot(aes_string(x = input$race, y = "poll_diff")) +
-      geom_point(shape = 21, size = 2) +
-      ggtitle("Democrats did slightly better than Upshot polls anticipated",
-              subtitle = "Predictions by NYTimes upshot, midterm elections results as of 11/10") +
-      xlab("Percent") +
-      ylab("Difference between Republican advantage prediction and result")
+      ggplot(aes(x = percent, y = poll_diff, color = factor(demographic))) +
+      geom_point() +
+      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE)
   })
   
-  output$racePlot <- renderPlot({
-    # Let's add a column to our data with predicted win
-    election_data <- election_data %>% 
-      left_join(race_eth_data)
-    election_data %>% 
-      ggplot(aes_string(x = input$race_eth, y = "poll_diff")) +
-      geom_point(shape = 21, size = 2) +
-      ggtitle("Democrats did slightly better than Upshot polls anticipated",
-              subtitle = "Predictions by NYTimes upshot, midterm elections results as of 11/10") +
-      xlab("Percent") +
-      ylab("Difference between Republican advantage prediction and result")
-  })
+  
 }
 
 # Run the application 
