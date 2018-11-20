@@ -22,6 +22,7 @@ gender_data <- read_rds("gender_data")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Midterm Election results: Predictions and Actual", 
+                 
   tabPanel("Race/Ethnicity",
            fluidPage(
              # Page title
@@ -50,7 +51,10 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                sidebarPanel(
                  checkboxGroupInput("educ",
                                     label = "Select Educational Attainment:",
-                                    choices = c("High School Grad. or Less", "Some College Educ.", "4-year College Grad.", "Postgraduate Degree"),
+                                    choices = c("High School or Less" = "High School Grad. or Less", 
+                                                "Some College" = "Some College Educ.", 
+                                                "4-year College Graduate" = "4-year College Grad.", 
+                                                "Postgraduate Degree" = "Postgraduate Degree"),
                                     selected = "High School Grad. or Less")
                ),
                # Show a plot of the generated distribution
@@ -59,6 +63,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                )
              )
            ),
+  
   tabPanel("Age",
            fluidPage(
              # Page title
@@ -77,6 +82,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                )
              )
            ),
+  
   tabPanel("Gender",
            fluidPage(
              # Page title
@@ -100,9 +106,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  
-  
-  
+
   output$plot_race_eth <- renderPlot({
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
@@ -171,9 +175,8 @@ a district and polling error is very small") +
               subtitle = "Districts with more women voted for Democrats at lower rates than expected") +
       xlab("Percent of Individuals Polled") +
       ylab("Absolute Change in Predicted to Real Democratic Advantage")
+  
   })
-  
-  
 }
 
 # Run the application 
