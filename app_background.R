@@ -34,83 +34,6 @@ all_polls <- map_dfr(file_names, read_csv, .id = "source")
 # Cleaning the source names so that they are easier to work with
 all_polls$source <- str_remove(all_polls$source, "2018-live-poll-results-master/data/elections-poll-")
 all_polls$source <- str_remove(all_polls$source, ".csv")
-<<<<<<< HEAD
-all_polls <- separate(all_polls, source, into = c("district", "wave"), sep = "-")
-all_polls <- separate(all_polls, district, into = c("state", "district_race"), sep = 2)
-all_polls <- all_polls %>% 
-  mutate(district_race = case_when(!district_race %in% c("gov", "sen") ~ as.character(parse_integer(district_race)),
-                            TRUE ~ district_race))
-
-# Keeping only the most recent poll results:
-double_polls <- all_polls %>% 
-  count(state, district_race, wave) %>% 
-  count(state, district_race) %>%
-  filter(nn == 2)
-
-all_polls <- all_polls %>% 
-  left_join(double_polls, by = c("state", "district_race")) %>% 
-  filter(is.na(nn) | nn == 2 & wave == 3) %>% 
-  select(-nn)
-
-
-# Calculating the predicted democratic margin for each race and the demographic breakdowns of respondents in that race.
-# Democratic margin:
-dem_advantage <- all_polls %>% 
-  select(state, district_race, wave, response, final_weight) %>% 
-  group_by(state, district_race, wave, response) %>% 
-  summarize(weighted = sum(final_weight)) %>% 
-  spread(key = response, value = weighted) %>% 
-  ungroup() %>% 
-  mutate(dem_advantage = ((Dem - Rep)/(3 + 4 + 5 + 6 + Dem + Rep + Und))*100) %>% 
-  select(state, district_race, wave, dem_advantage)
-
-# Age table:
-age <- all_polls %>% 
-  filter(response %in% c("Dem", "Rep", "Und"), 
-         !ager %in% c("[DO NOT READ] Don't know/Refused", "[DO NOT READ] Refused")) %>% 
-  group_by(state, district_race) %>% 
-  count(ager) %>% 
-  mutate(percent_in = n/(sum(n))*100)
-
-# Education table:
-education <- all_polls %>% 
-  filter(response %in% c("Dem", "Rep", "Und"), 
-         educ4 != "[DO NOT READ] Don't know/Refused") %>% 
-  group_by(state, district_race) %>% 
-  count(educ4) %>% 
-  mutate(percent_in = n/(sum(n))*100)
-
-# Gender table:
-gender <- all_polls %>% 
-  filter(response %in% c("Dem", "Rep", "Und"), 
-         gender != "[DO NOT READ] Don't know/Refused") %>% 
-  group_by(state, district_race) %>% 
-  count(gender) %>% 
-  mutate(percent_in = n/(sum(n))*100)
-
-# Race table:
-race <- all_polls %>% 
-  filter(response %in% c("Dem", "Rep", "Und"), 
-         race_eth != "[DO NOT READ] Don't know/Refused") %>% 
-  group_by(state, district_race) %>% 
-  count(race_eth) %>% 
-  mutate(percent_in = n/(sum(n))*100)
-
-# Likeliness to vote:
-likeliness <- all_polls %>% 
-  filter(response %in% c("Dem", "Rep", "Und"), 
-         likely != "[DO NOT READ] Don't know/Refused") %>% 
-  group_by(state, district_race) %>% 
-  count(likely) %>% 
-  mutate(percent_in = n/(sum(n))*100)
-
-# Joining together demographic tables:
-summary_polls <- age %>% 
-  bind_rows(education, gender, likeliness, race) %>% 
-  arrange(state, district_race) %>% 
-  select(state, district_race, ager, educ4, gender, likely, race_eth, percent_in, n) %>% 
-  left_join(dem_advantage, by = c("state", "district_race"))
-=======
 all_polls <- all_polls %>% 
   separate(source, into = c("district", "wave"), sep = "-") %>% 
   separate(district, into = c("state", "district_race"), sep = 2) %>% 
@@ -147,7 +70,6 @@ poll_dem_advantage <- all_polls %>%
   # [State]-[district num, sen, gov], dem, rep, other, rep_advantage_poll, rep_advantage
   ungroup() %>% 
   select(everything(), -group_wt)
->>>>>>> dcdc0794f91a859e981f9601c387744f38163dd3
 
 
 # CREATING A DATA FRAME THAT INCLUDES THE RESULTS OF EACH RACE AS WELL (STILL AT POLL LEVEL)
@@ -188,27 +110,24 @@ house_results <- house_results_read %>%
             total_votes_16 = `2016 Total Votes Cast`, 
             percent_16_turnout = `Raw Votes vs. 2016`)
 
-# Adding column with state abbreviations in lower case to make join with polling data easier
+# Adding column with state abbreviations in lower case to make join with polling
+# data easier
 state_names <- bind_cols(state = state.abb, state_name = state.name) %>% 
   mutate(state = str_to_lower(state))
 
 house_results <- house_results %>% 
   left_join(state_names, by = "state_name")
 
-# Binding the two data sets so that we have each poll response and the actual outcome for the district of that response
-<<<<<<< HEAD
-results_and_polls <- summary_polls %>% 
-  left_join(house_results, by = c("state", "district_race")) %>% 
-  mutate(district = str_c(state, "-", district_race),
-         district = str_to_upper(district))
-=======
+# Binding the two data sets so that we have each poll response and the actual
+# outcome for the district of that response
 results_and_polls <- all_polls %>% 
   left_join(house_results, by = c("state", "district_race")) %>% 
   left_join(poll_dem_advantage) %>% 
-  mutate(district = str_c(state, "-", district_race)) %>% 
+  mutate(district = str_to_upper(str_c(state, "-", district_race))) %>% 
   select(-36:-86)   # dropping unnecessary survey questions
->>>>>>> dcdc0794f91a859e981f9601c387744f38163dd3
 
+# Senate and a few house races were unincluded / not great data, so we manually
+# added the results
 results_and_polls <- results_and_polls %>% 
   mutate(winner = case_when(district == "az-sen" ~ "Kyrsten Sinema", 
                             district == "fl-gov" ~ "Ron DeSantis",
@@ -244,36 +163,15 @@ results_and_polls <- results_and_polls %>%
 
 # Calculating the polling error for each race:
 results_and_polls <- results_and_polls %>% 
-  mutate(poll_error = actual_dem_margin - dem_advantage)
+  mutate(poll_error = actual_dem_margin - dem_advantage_poll)
 
-<<<<<<< HEAD
-results_and_polls %>% write_rds("poll_mistakes/results_and_polls")
-
-results_and_polls %>% 
-  filter(!is.na(likely)) %>% 
-  ggplot(aes(x = percent_in, y = poll_error, color = likely)) +
-  geom_point() +
-  facet_wrap(~likely)
-
-results_and_polls %>% 
-  ggplot(aes(x = swing_16, y = poll_error)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-results_and_polls %>% 
-  ggplot(aes(x = clinton_16, y = poll_error)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-=======
 # We store this data for use in figuring out interesting things about each district
 write_rds(results_and_polls, path = "poll_data")
 
-# We also summarize to have one line for each district of poll diff
-# We use this data in our shiny app
+# We also summarize to have one line for each district of poll diff.
+# We use this data in our shiny app.
 results_and_polls %>% 
   group_by(district) %>% 
   distinct(poll_diff) %>% 
   write_rds(path = "poll_diff/error_data")
-  
->>>>>>> dcdc0794f91a859e981f9601c387744f38163dd3
 
