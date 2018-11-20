@@ -117,7 +117,7 @@ server <- function(input, output) {
                geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
                facet_wrap(~demographic) +
                labs(x = "Percent of Individuals Polled",
-                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    y = "Actual Democratic Margin beyond Expected",
                     title = "Racial Minorities Aided Democrats",
                     subtitle = "In districts with greater percentages of polled racial minorities, 
                     the NYTimes Upshot polls underestimated the Democratic margin")) %>% 
@@ -139,7 +139,7 @@ server <- function(input, output) {
                geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
                facet_wrap(~demographic) +
                labs(x = "Percent of Individuals Polled",
-                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    y = "Actual Democratic Margin beyond Expected",
                     title = "The Education Divide",
                     subtitle = "Districts with greater percentages of college grads 
                     (and fewer individuals with a high school diploma or less) voted for Democrats 
@@ -161,7 +161,7 @@ server <- function(input, output) {
                geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
                facet_wrap(~demographic) +
                labs(x = "Percent of Individuals Polled",
-                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    y = "Actual Democratic Margin beyond Expected",
                     title = "Age barely mattered",
                     subtitle = "Polls may slightly have overweighted the democratic edge in young people
                     and underplayed it in everyone else, but any relationship between age of 
@@ -183,7 +183,7 @@ server <- function(input, output) {
                geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
                facet_wrap(~demographic) +
                labs(x = "Percent of Individuals Polled",
-                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    y = "Actual Democratic Margin beyond Expected",
                     title = "Female Republicans?",
                     subtitle = "Districts with more women voted for Democrats at lower rates than expected")) %>% 
       config(displayModeBar = FALSE)
