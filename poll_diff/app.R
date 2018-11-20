@@ -36,8 +36,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                                     selected = "White")
                  ),
                # Show a plot of the generated distribution
-               mainPanel(plotOutput("plot_race_eth"),
-                         tableOutput("race_eth_tibble"))
+               mainPanel(plotlyOutput("plot_race_eth"))
                )
              )
            ),
@@ -107,21 +106,37 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-  output$plot_race_eth <- renderPlot({
+  output$plot_race_eth <- renderPlotly({
+    f <- list(
+      family = "Courier New, monospace",
+      size = 18,
+      color = "#7f7f7f"
+    )
+    x <- list(
+      title = "x Axis",
+      titlefont = f
+    )
+    y <- list(
+      title = "y Axis",
+      titlefont = f
+    )
+    
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
     election_data <- error_data %>% 
-      left_join(race_eth_data, by = c("district"))
-    election_data %>% 
-      filter(demographic %in% input$race_eth) %>% 
-      ggplot(aes(x = percent, y = poll_diff)) +
+      left_join(race_eth_data, by = c("district")) %>% 
+      filter(demographic %in% input$race_eth) 
+    ggplotly(tooltip = "text",
+      ggplot(data = election_data, aes(x = percent, y = poll_diff, text = district, group = 1)) +
       geom_point() +
       geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
-      facet_wrap(~demographic) +
-      ggtitle("Racial Minorities Aided Democrats",
-              subtitle = "In districts with greater percentages of polled racial minorities, \nthe NYTimes Upshot polls underestimated the Democratic margin") +
-      xlab("Percent of Individuals Polled") +
-      ylab("Absolute Change in Predicted to Real Democratic Advantage")
+      facet_wrap(~demographic)) %>% 
+      #ggtitle("Racial Minorities Aided Democrats",
+              #subtitle = "In districts with greater percentages of polled racial minorities, \nthe NYTimes Upshot polls underestimated the Democratic margin") +
+      #xlab("Percent of Individuals Polled") +
+      #ylab("Absolute Change in Predicted to Real Democratic Advantage"))  %>% 
+      config(displayModeBar = FALSE) %>% 
+      layout(title = "Race", xaxis = x, yaxis = y)
   })
   
   output$plot_educ <- renderPlot({
