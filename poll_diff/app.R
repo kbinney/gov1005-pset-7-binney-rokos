@@ -17,7 +17,6 @@ library(plotly)
 
 # Our error data and demographic data is stored in different subtables.
 # We first load them all, and join them in the relevant piece of code
-election_data <- read_rds("data")
 error_data <- read_rds("error_data")
 race_eth_data <- read_rds("race_eth")
 education_data <- read_rds("education_data")

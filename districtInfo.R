@@ -50,19 +50,8 @@ gender <- elections_data %>%
   select(district, percent, demographic, gender) %>% 
   ungroup()
 
-# Likeliness to vote:
-likeliness <- elections_data %>% 
-  filter(likely != "[DO NOT READ] Don't know/Refused") %>% 
-  group_by(district) %>% 
-  count(likely) %>% 
-  mutate(percent = 100 * n / sum(n),
-         demographic = likely) %>% 
-  select(district, percent, demographic, likely) %>% 
-  ungroup()
-
 # We keep these as inidividual data frames and write them all for use in our app
 write_rds(education, path = "poll_diff/education_data")
 write_rds(race, path = "poll_diff/race_eth")
 write_rds(age, path = "poll_diff/age_data")
 write_rds(gender, path = "poll_diff/gender_data")
-write_rds(likeliness, path = "poll_diff/likliness")
