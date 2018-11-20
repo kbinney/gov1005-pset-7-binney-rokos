@@ -36,8 +36,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                                     selected = "White")
                  ),
                # Show a plot of the generated distribution
-               mainPanel(plotOutput("plot_race_eth"),
-                         tableOutput("race_eth_tibble"))
+               mainPanel(plotlyOutput("plot_race_eth"))
                )
              )
            ),
@@ -58,8 +57,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                                     selected = "High School Grad. or Less")
                ),
                # Show a plot of the generated distribution
-               mainPanel(plotOutput("plot_educ"),
-                         tableOutput("educ_tibble"))
+               mainPanel(plotlyOutput("plot_educ"))
                )
              )
            ),
@@ -77,8 +75,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                                     selected = "18 to 34")
                ),
                # Show a plot of the generated distribution
-               mainPanel(plotOutput("plot_age"),
-                         tableOutput("age_tibble"))
+               mainPanel(plotlyOutput("plot_age"))
                )
              )
            ),
@@ -96,8 +93,7 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
                                     selected = "Female")
                ),
                # Show a plot of the generated distribution
-               mainPanel(plotOutput("plot_gender"),
-                         tableOutput("gender_tibble"))
+               mainPanel(plotlyOutput("plot_gender"))
                )
              )
            )
@@ -107,74 +103,90 @@ ui <- navbarPage("Midterm Election results: Predictions and Actual",
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-  output$plot_race_eth <- renderPlot({
+  output$plot_race_eth <- renderPlotly({
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
     election_data <- error_data %>% 
-      left_join(race_eth_data, by = c("district"))
-    election_data %>% 
-      filter(demographic %in% input$race_eth) %>% 
-      ggplot(aes(x = percent, y = poll_diff)) +
-      geom_point() +
-      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
-      facet_wrap(~demographic) +
-      ggtitle("Racial Minorities Aided Democrats",
-              subtitle = "In districts with greater percentages of polled racial minorities, \nthe NYTimes Upshot polls underestimated the Democratic margin") +
-      xlab("Percent of Individuals Polled") +
-      ylab("Absolute Change in Predicted to Real Democratic Advantage")
+      left_join(race_eth_data, by = c("district")) %>% 
+      filter(demographic %in% input$race_eth)
+    
+    ggplotly(tooltip = c("text"),
+             ggplot(data = election_data,
+                    aes(x = percent, y = poll_diff, text = district, group = 1)) +
+               geom_point() +
+               geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
+               facet_wrap(~demographic) +
+               labs(x = "Percent of Individuals Polled",
+                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    title = "Racial Minorities Aided Democrats",
+                    subtitle = "In districts with greater percentages of polled racial minorities, 
+                    the NYTimes Upshot polls underestimated the Democratic margin")) %>% 
+      config(displayModeBar = FALSE)
+      
   })
   
-  output$plot_educ <- renderPlot({
+  output$plot_educ <- renderPlotly({
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
     election_data <- error_data %>% 
-      left_join(education_data, by = c("district"))
-    election_data %>% 
-      filter(demographic %in% input$educ) %>% 
-      ggplot(aes(x = percent, y = poll_diff)) +
-      geom_point() +
-      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
-      facet_wrap(~demographic) +
-      ggtitle("The Education Divide",
-              subtitle = "Districts with greater percentages of college grads (and fewer individuals with a high school diploma or less) \nvoted for Democrats at slighlty higher rates than polls anticipated") +
-      xlab("Percent of Individuals Polled") +
-      ylab("Absolute Change in Predicted to Real Democratic Advantage")
+      left_join(education_data, by = c("district")) %>% 
+      filter(demographic %in% input$educ)
+    
+    ggplotly(tooltip = c("text"),
+             ggplot(data = election_data,
+                    aes(x = percent, y = poll_diff, text = district, group = 1)) +
+               geom_point() +
+               geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
+               facet_wrap(~demographic) +
+               labs(x = "Percent of Individuals Polled",
+                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    title = "The Education Divide",
+                    subtitle = "Districts with greater percentages of college grads 
+                    (and fewer individuals with a high school diploma or less) voted for Democrats 
+                    at slighlty higher rates than polls anticipated")) %>% 
+      config(displayModeBar = FALSE)
   })
   
-  output$plot_age <- renderPlot({
+  output$plot_age <- renderPlotly({
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
     election_data <- error_data %>% 
-      left_join(age_data, by = c("district"))
-    election_data %>% 
-      filter(demographic %in% input$age) %>% 
-      ggplot(aes(x = percent, y = poll_diff)) +
-      geom_point() +
-      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
-      facet_wrap(~demographic) +
-      ggtitle("Age barely mattered",
-              subtitle = "Polls may slightly have overweighted the democratic edge in young people
-and underplayed it in everyone else, but any relationship between age of 
-a district and polling error is very small") +
-      xlab("Percent of Individuals Polled") +
-      ylab("Absolute Change in Predicted to Real Democratic Advantage")
+      left_join(age_data, by = c("district")) %>% 
+      filter(demographic %in% input$age)
+    
+    ggplotly(tooltip = c("text"),
+             ggplot(data = election_data,
+                    aes(x = percent, y = poll_diff, text = district, group = 1)) +
+               geom_point() +
+               geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
+               facet_wrap(~demographic) +
+               labs(x = "Percent of Individuals Polled",
+                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    title = "Age barely mattered",
+                    subtitle = "Polls may slightly have overweighted the democratic edge in young people
+                    and underplayed it in everyone else, but any relationship between age of 
+                    a district and polling error is very small")) %>% 
+      config(displayModeBar = FALSE)
   })
   
-  output$plot_gender <- renderPlot({
+  output$plot_gender <- renderPlotly({
     # This chooses which demographic, which we need to join to the data with 
     # poll error before graphing
     election_data <- error_data %>% 
-      left_join(gender_data, by = c("district"))
-    election_data %>% 
-      filter(demographic %in% input$gender) %>% 
-      ggplot(aes(x = percent, y = poll_diff)) +
-      geom_point() +
-      geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
-      facet_wrap(~demographic) +
-      ggtitle("Female Republicans?",
-              subtitle = "Districts with more women voted for Democrats at lower rates than expected") +
-      xlab("Percent of Individuals Polled") +
-      ylab("Absolute Change in Predicted to Real Democratic Advantage")
+      left_join(gender_data, by = c("district")) %>% 
+      filter(demographic %in% input$gender)
+    
+    ggplotly(tooltip = c("text"),
+             ggplot(data = election_data,
+                    aes(x = percent, y = poll_diff, text = district, group = 1)) +
+               geom_point() +
+               geom_smooth(method = "lm", se = FALSE, fullrange = TRUE) +
+               facet_wrap(~demographic) +
+               labs(x = "Percent of Individuals Polled",
+                    y = "Absolute Change in Predicted to Real Democratic Advantage",
+                    title = "Female Republicans?",
+                    subtitle = "Districts with more women voted for Democrats at lower rates than expected")) %>% 
+      config(displayModeBar = FALSE)
   
   })
 }
